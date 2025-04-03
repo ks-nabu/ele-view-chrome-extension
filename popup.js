@@ -1,4 +1,4 @@
-// popup.js
+// popup.js (全体)
 
 const availableTags = [
   "div",
@@ -19,7 +19,7 @@ const selectAllCheckbox = document.getElementById("select-all");
 const onButton = document.getElementById("on-button");
 const offButton = document.getElementById("off-button");
 
-// タグごとの設定（不足要件の仮定義）
+// タグごとの設定
 const tagConfigs = {
   div: { color: "rgba(255, 0, 0, 0.7)", zIndex: 100 },
   p: { color: "rgba(0, 0, 255, 0.7)", zIndex: 101 },
@@ -35,7 +35,7 @@ const tagConfigs = {
   h4: { color: "rgba(144, 238, 144, 0.8)", zIndex: 107 },
 };
 
-// チェックボックスを生成
+// --- チェックボックス生成ロジック (変更なし) ---
 availableTags.forEach((tag) => {
   const div = document.createElement("div");
   div.className = "flex items-center";
@@ -48,8 +48,6 @@ availableTags.forEach((tag) => {
   label.htmlFor = `tag-${tag}`;
   label.textContent = tag;
   label.className = "text-gray-700";
-
-  // ボーダー色のサンプル表示（任意）
   const colorSample = document.createElement("span");
   colorSample.style.display = "inline-block";
   colorSample.style.width = "10px";
@@ -57,26 +55,25 @@ availableTags.forEach((tag) => {
   colorSample.style.backgroundColor = tagConfigs[tag]?.color || "transparent";
   colorSample.style.marginLeft = "4px";
   colorSample.style.border = "1px solid #ccc";
-
   div.appendChild(checkbox);
   div.appendChild(label);
   div.appendChild(colorSample);
   tagSelectionContainer.appendChild(div);
 });
+// --- チェックボックス生成ロジックここまで ---
 
-// チェック状態をストレージから読み込む
+// --- ストレージ関連、すべて選択関連 (変更なし) ---
 document.addEventListener("DOMContentLoaded", async () => {
   const result = await chrome.storage.local.get(["selectedTags"]);
-  const selected = result.selectedTags || []; // デフォルトは空配列
+  const selected = result.selectedTags || [];
   document.querySelectorAll(".tag-checkbox").forEach((cb) => {
     if (selected.includes(cb.value)) {
       cb.checked = true;
     }
   });
-  updateSelectAllState(); // 「すべて選択」の状態更新
+  updateSelectAllState();
 });
 
-// チェックボックス変更時にストレージに保存
 tagSelectionContainer.addEventListener("change", (event) => {
   if (event.target.classList.contains("tag-checkbox")) {
     saveSelectedTags();
@@ -84,7 +81,6 @@ tagSelectionContainer.addEventListener("change", (event) => {
   }
 });
 
-// 「すべて選択」チェックボックスの処理
 selectAllCheckbox.addEventListener("change", () => {
   const isChecked = selectAllCheckbox.checked;
   document.querySelectorAll(".tag-checkbox").forEach((cb) => {
@@ -93,136 +89,207 @@ selectAllCheckbox.addEventListener("change", () => {
   saveSelectedTags();
 });
 
-// 選択状態をストレージに保存する関数
 function saveSelectedTags() {
   const selectedTags = getSelectedTags();
   chrome.storage.local.set({ selectedTags });
 }
 
-// 選択されているタグを取得する関数
 function getSelectedTags() {
   return Array.from(document.querySelectorAll(".tag-checkbox:checked")).map(
     (cb) => cb.value
   );
 }
 
-// 「すべて選択」の状態を更新する関数
 function updateSelectAllState() {
   const allCheckboxes = document.querySelectorAll(".tag-checkbox");
   const checkedCheckboxes = document.querySelectorAll(".tag-checkbox:checked");
-  selectAllCheckbox.checked = allCheckboxes.length === checkedCheckboxes.length;
+  selectAllCheckbox.checked =
+    allCheckboxes.length > 0 &&
+    allCheckboxes.length === checkedCheckboxes.length; // 空の場合も考慮
 }
+// --- ストレージ関連、すべて選択関連ここまで ---
 
-// コンテンツスクリプトを実行するヘルパー関数
-async function executeContentScript(func, args = []) {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab || !tab.id) {
-    console.error("アクティブなタブが見つかりません。");
-    return;
-  }
-  // content.js を注入（複数回呼んでも問題ないが、初回のみ必要）
-  await chrome.scripting
-    .executeScript({
-      target: { tabId: tab.id },
-      files: ["content.js"],
-    })
-    .catch((err) => console.error("content.js の注入に失敗:", err)); // エラーハンドリング追加
+// ****** ↓↓↓ オンボタン、オフボタンの処理を修正 ↓↓↓ ******
 
-  // content.js内の関数を実行
-  chrome.scripting
-    .executeScript({
-      target: { tabId: tab.id },
-      func: func,
-      args: args,
-    })
-    .catch((err) => console.error("関数実行に失敗:", func.name, err)); // エラーハンドリング追加
-}
-
-// オンボタンの処理
-onButton.addEventListener("click", () => {
+// オンボタンの処理 (asyncに変更し、処理を分離)
+onButton.addEventListener("click", async () => {
+  // asyncキーワードを追加
   const tagsToVisualize = getSelectedTags();
+  if (tagsToVisualize.length === 0) return; // タグが選択されていない場合は何もしない
+
   const configsToSend = {};
   tagsToVisualize.forEach((tag) => {
     if (tagConfigs[tag]) {
       configsToSend[tag] = tagConfigs[tag];
     }
   });
-  // visualizeElements 関数を content script で実行
-  executeContentScript(visualizeElements, [tagsToVisualize, configsToSend]);
-});
 
-// オフボタンの処理
-offButton.addEventListener("click", () => {
-  // clearOverlays 関数を content script で実行
-  executeContentScript(clearOverlays);
-});
-
-// --- content.js内で実行される関数 ---
-// これらの関数は popup.js のスコープには存在しないが、
-// executeContentScript によってタブのコンテキストで実行される。
-// ここに書いておくと、func: visualizeElements のように参照できる。
-
-/* istanbul ignore next */ // Code coverage ignore start
-function visualizeElements(tags, configs) {
-  // 既存のオーバーレイをクリア
-  clearOverlays();
-
-  // オーバーレイ要素を保持するコンテナを作成（または取得）
-  let overlayContainer = document.getElementById("ele-view-overlay-container");
-  if (!overlayContainer) {
-    overlayContainer = document.createElement("div");
-    overlayContainer.id = "ele-view-overlay-container";
-    // コンテナ自体は操作を受け付けないようにする
-    overlayContainer.style.position = "absolute";
-    overlayContainer.style.top = "0";
-    overlayContainer.style.left = "0";
-    overlayContainer.style.width = "0"; // サイズを持たないように
-    overlayContainer.style.height = "0";
-    overlayContainer.style.zIndex = "99999"; // 他のオーバーレイより手前に来るように念のため設定
-    overlayContainer.style.pointerEvents = "none"; // コンテナ自体もイベントを無視
-    document.body.appendChild(overlayContainer);
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab || !tab.id) {
+    console.error("アクティブなタブが見つかりません。");
+    return;
   }
+
+  try {
+    // content.js を注入して関数定義を確実にする (念のため)
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ["content.js"],
+    });
+
+    // 1. 最初に clearOverlays を実行
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: clearOverlays, // clearOverlays関数をページ側で実行
+    });
+
+    // 2. 次に visualizeElements を実行
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: visualizeElements, // visualizeElements関数をページ側で実行
+      args: [tagsToVisualize, configsToSend], // 引数を渡す
+    });
+  } catch (err) {
+    console.error("スクリプトの実行中にエラーが発生しました:", err);
+    // エラー発生時もポートが閉じる場合があるので、エラー内容を確認
+    if (
+      err.message.includes("Could not establish connection") ||
+      err.message.includes("Receiving end does not exist")
+    ) {
+      console.warn(
+        "ページがリロードされたか、拡張機能が無効になった可能性があります。"
+      );
+    } else if (
+      !err.message.includes(
+        "The message port closed before a response was received"
+      )
+    ) {
+      // "port closed"以外のエラーを表示
+      console.error("詳細エラー:", err);
+    }
+  }
+});
+
+// オフボタンの処理 (asyncに変更)
+offButton.addEventListener("click", async () => {
+  // asyncキーワードを追加
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab || !tab.id) {
+    console.error("アクティブなタブが見つかりません。");
+    return;
+  }
+  try {
+    // content.js を注入 (念のため)
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ["content.js"],
+    });
+    // clearOverlays を実行
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: clearOverlays, // clearOverlays関数をページ側で実行
+    });
+  } catch (err) {
+    console.error("オーバーレイのクリア中にエラーが発生しました:", err);
+    if (
+      err.message.includes("Could not establish connection") ||
+      err.message.includes("Receiving end does not exist")
+    ) {
+      console.warn(
+        "ページがリロードされたか、拡張機能が無効になった可能性があります。"
+      );
+    } else if (
+      !err.message.includes(
+        "The message port closed before a response was received"
+      )
+    ) {
+      console.error("詳細エラー:", err);
+    }
+  }
+});
+
+// popup.js 内の関数定義部分 (最終版 - Fixedコンテナ + ビューポート座標)
+
+/* istanbul ignore next */
+function visualizeElements(tags, configs) {
+  // --- fixedコンテナのみを使用 ---
+  let fixedContainer = document.getElementById(
+    "ele-view-overlay-container-fixed"
+  );
+  if (!fixedContainer) {
+    fixedContainer = document.createElement("div");
+    fixedContainer.id = "ele-view-overlay-container-fixed";
+    fixedContainer.style.position = "fixed"; // ビューポート基準のコンテナ
+    fixedContainer.style.top = "0";
+    fixedContainer.style.left = "0";
+    // コンテナ自体はサイズ不要。オーバーレイが絶対配置される基点となる。
+    fixedContainer.style.width = "0";
+    fixedContainer.style.height = "0";
+    fixedContainer.style.zIndex = "99999"; // 最前面に
+    fixedContainer.style.pointerEvents = "none"; // クリック透過
+    if (document.body) {
+      document.body.appendChild(fixedContainer);
+    } else {
+      console.error("Ele-view: document.body が見つかりません。");
+      return;
+    }
+  }
+  // --- コンテナ準備完了 ---
 
   tags.forEach((tag) => {
     const elements = document.querySelectorAll(tag);
-    const config = configs[tag] || { color: "gray", zIndex: 99 }; // 設定がない場合のデフォルト
+    const config = configs[tag] || { color: "gray", zIndex: 99 };
 
     elements.forEach((element) => {
       const rect = element.getBoundingClientRect();
 
-      // 要素がビューポート内にない場合や非表示の場合はスキップすることも検討
-      if (rect.width === 0 || rect.height === 0) {
+      // 画面外チェック
+      const isInViewport =
+        rect.top < window.innerHeight &&
+        rect.bottom > 0 &&
+        rect.left < window.innerWidth &&
+        rect.right > 0;
+      // 幅高さ0 または 完全に画面外の要素はスキップ
+      if (rect.width === 0 || rect.height === 0 || !isInViewport) {
         return;
       }
 
       const overlay = document.createElement("div");
-      overlay.classList.add("ele-view-overlay"); // 削除用クラス
-      overlay.style.position = "absolute";
-      // getBoundingClientRect はビューポート基準、スクロール量を加味して絶対座標に
-      overlay.style.left = `${rect.left + window.scrollX}px`;
-      overlay.style.top = `${rect.top + window.scrollY}px`;
+      overlay.classList.add("ele-view-overlay");
+      overlay.style.position = "absolute"; // fixedコンテナ内で絶対配置
+
+      // ★ 座標計算：ビューポート座標をそのまま使用 ★
+      overlay.style.left = `${rect.left}px`;
+      overlay.style.top = `${rect.top}px`;
+      // ★★★★★★★★★★★★★★★★★★★★★★★★
+
       overlay.style.width = `${rect.width}px`;
       overlay.style.height = `${rect.height}px`;
-      overlay.style.border = `1px solid ${config.color}`;
+      overlay.style.border = `2px solid ${config.color}`; // ボーダーは2px
       overlay.style.zIndex = config.zIndex;
-      overlay.style.pointerEvents = "none"; // オーバーレイ自体がクリック等を妨げないように
-      overlay.style.boxSizing = "border-box"; // ボーダーを含めてサイズ計算
+      overlay.style.pointerEvents = "none";
+      overlay.style.boxSizing = "border-box";
 
-      overlayContainer.appendChild(overlay); // コンテナに追加
+      // すべてのオーバーレイをfixedコンテナに追加
+      fixedContainer.appendChild(overlay);
     });
   });
 }
 
 /* istanbul ignore next */
 function clearOverlays() {
-  const overlayContainer = document.getElementById(
-    "ele-view-overlay-container"
+  // fixedコンテナのみを削除
+  const fixedContainer = document.getElementById(
+    "ele-view-overlay-container-fixed"
   );
-  if (overlayContainer) {
-    overlayContainer.remove(); // コンテナごと削除する方がシンプル
+  if (fixedContainer) {
+    fixedContainer.remove();
   }
-  // 個別に削除する場合
-  // const overlays = document.querySelectorAll('.ele-view-overlay');
-  // overlays.forEach(overlay => overlay.remove());
+  // absoluteコンテナが残っている可能性も考慮して削除
+  const absoluteContainer = document.getElementById(
+    "ele-view-overlay-container-absolute"
+  );
+  if (absoluteContainer) {
+    absoluteContainer.remove();
+  }
 }
-// Code coverage ignore end
