@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ele-view Popup</title>
+    <link href="tailwind.css" rel="stylesheet" />
+    <style>
+      /* ポップアップの最小幅などを設定 */
+      body {
+        min-width: 250px;
+        padding: 1rem;
+      }
+      label {
+        margin-right: 0.5rem; /* チェックボックスとラベルの間隔 */
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100">
+    <h1 class="text-lg font-bold mb-4 text-center text-blue-700">Ele-view</h1>
+
+    <div class="mb-4">
+      <h2 class="font-semibold mb-2 text-gray-700">表示するタグを選択:</h2>
+      <div class="grid grid-cols-2 gap-2 text-sm" id="tag-selection"></div>
+      <div class="mt-3">
+        <input type="checkbox" id="select-all" class="mr-1" />
+        <label for="select-all" class="text-sm font-medium text-gray-800"
+          >すべて選択</label
+        >
+      </div>
+    </div>
+
+    <div class="flex justify-between mt-6">
+      <button
+        id="on-button"
+        class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out"
+      >
+        表示 (再描画)
+      </button>
+      <button
+        id="off-button"
+        class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out"
+      >
+        非表示
+      </button>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
