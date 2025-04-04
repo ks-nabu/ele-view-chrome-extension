@@ -1,8 +1,14 @@
-node_modules/
+# Dependencies
+/node_modules
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Other files
+.DS_Store
+*.env
 *.svg
 requirements.md
 images/sample/
-tailwind.config.js
-input.css
-
-.DS_Store
