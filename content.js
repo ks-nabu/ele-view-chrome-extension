@@ -1,6 +1,6 @@
-// content.js (ログ出力強化版)
+// content.js (パディング可視化機能を追加)
 
-// --- 設定と状態管理 ---
+// --- 設定と状態管理 (変更なし) ---
 const DEBOUNCE_DELAY = 150;
 let redrawTimeout = null;
 let activeTags = [];
@@ -8,119 +8,186 @@ let activeConfigs = {};
 let isActive = false;
 const CONTAINER_ID = "ele-view-overlay-container-fixed";
 
-// --- オーバーレイのクリア処理 ---
+// --- ★ Helper Function: RGBA文字列のアルファ値(透明度)を変更 ---
+/**
+ * RGBAカラー文字列を受け取り、指定されたアルファ値を持つ新しいRGBA文字列を返す
+ * @param {string} rgbaString - 例: "rgba(255, 0, 0, 0.7)"
+ * @param {number} alpha - 新しいアルファ値 (0.0 から 1.0)
+ * @returns {string} - 例: "rgba(255, 0, 0, 0.15)"、不正な入力の場合は元の文字列
+ */
+function setRgbaAlpha(rgbaString, alpha) {
+  // 文字列でない場合や形式が違う場合はそのまま返す
+  if (typeof rgbaString !== "string") return rgbaString;
+  // RGBA形式にマッチするか確認 (RGB形式も許容)
+  const match = rgbaString.match(
+    /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)$/i
+  );
+  if (match) {
+    // アルファ値を0から1の範囲に収める
+    const clampedAlpha = Math.max(0, Math.min(1, alpha));
+    return `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${clampedAlpha})`;
+  }
+  return rgbaString; // マッチしない場合は元の文字列を返す
+}
+
+// --- オーバーレイのクリア処理 (変更なし) ---
 function clearOverlays() {
-  console.log("[Ele-view Log] clearOverlays called."); // ★ログ追加
+  console.log("[Ele-view Log] clearOverlays called.");
   const fixedContainer = document.getElementById(CONTAINER_ID);
   if (fixedContainer) {
     fixedContainer.remove();
-    console.log("[Ele-view Log] Previous fixed container removed."); // ★ログ追加
+    console.log("[Ele-view Log] Previous fixed container removed.");
   }
   const absoluteContainer = document.getElementById(
     "ele-view-overlay-container-absolute"
   );
   if (absoluteContainer) {
     absoluteContainer.remove();
-    console.log("[Ele-view Log] Previous absolute container (if any) removed."); // ★ログ追加
+    console.log("[Ele-view Log] Previous absolute container (if any) removed.");
   }
 }
 
-// --- オーバーレイの描画処理 ---
+// --- ★ オーバーレイの描画処理 (パディングBOX追加) ---
 function visualizeElements(tags, configs) {
-  console.log("[Ele-view Log] visualizeElements called with tags:", tags); // ★ログ追加
+  console.log("[Ele-view Log] visualizeElements called with tags:", tags);
 
   clearOverlays(); // 最初にクリア
 
-  // アクティブ状態、タグ配列の存在、タグの数をチェック
   if (!isActive || !tags || tags.length === 0) {
     console.log(
       "[Ele-view Log] visualizeElements: Exiting - Not active or no tags selected."
-    ); // ★ログ追加
-    return; // 条件を満たさなければここで終了
+    );
+    return;
   }
   console.log(
     "[Ele-view Log] visualizeElements: Proceeding - Active and tags present."
-  ); // ★ログ追加
+  );
 
-  // document.body の存在チェック
   if (!document.body) {
     console.error(
       "[Ele-view Log] visualizeElements: Exiting - document.body not found!"
-    ); // ★ログ追加
-    return; // body がなければここで終了
+    );
+    return;
   }
 
-  // コンテナ作成
+  // Fixedコンテナを作成
   const fixedContainer = document.createElement("div");
   fixedContainer.id = CONTAINER_ID;
-  // ... (コンテナのスタイル設定は変更なし) ...
+  // ... (コンテナスタイル設定は変更なし) ...
   fixedContainer.style.position = "fixed";
   fixedContainer.style.top = "0";
   fixedContainer.style.left = "0";
   fixedContainer.style.width = "0";
   fixedContainer.style.height = "0";
-  fixedContainer.style.zIndex = "99999";
+  fixedContainer.style.zIndex = "99999"; // コンテナ自体のz-index
   fixedContainer.style.pointerEvents = "none";
   document.body.appendChild(fixedContainer);
   console.log(
     "[Ele-view Log] visualizeElements: Fixed container created and appended."
-  ); // ★ログ追加
+  );
 
-  let overlaysDrawn = 0; // 描画されたオーバーレイの数をカウント
+  let bordersDrawn = 0; // 描画したボーダー数をカウント
+  let paddingBoxesDrawn = 0; // 描画したパディングBOX数をカウント
 
-  // タグのループ
   tags.forEach((tag) => {
     const elements = document.querySelectorAll(tag);
-    // ★見つかった要素の数をログに出力
     console.log(
-      `[Ele-view Log] visualizeElements: Found <span class="math-inline">\{elements\.length\} elements for tag '</span>{tag}'.`
+      `[Ele-view Log] visualizeElements: Found ${elements.length} elements for tag '${tag}'.`
     );
     const config = configs[tag] || { color: "gray", zIndex: 99 };
+    // ボーダーとパディングBOXのz-indexを定義 (ボーダーが手前)
+    const borderZIndex = config.zIndex;
+    const paddingZIndex = config.zIndex - 1; // ボーダーより1つ奥
 
-    // 要素のループ
     elements.forEach((element) => {
-      const rect = element.getBoundingClientRect();
+      const rect = element.getBoundingClientRect(); // ボーダーボックス基準の位置とサイズ
+      const styles = getComputedStyle(element); // 計算済みスタイルを取得
+
       const isInViewport =
         rect.top < window.innerHeight &&
         rect.bottom > 0 &&
         rect.left < window.innerWidth &&
         rect.right > 0;
 
-      // サイズゼロまたは画面外ならスキップ
       if (rect.width === 0 || rect.height === 0 || !isInViewport) {
-        // console.log(`[Ele-view Log] Skipping element for tag '${tag}' (zero size or out of viewport).`); // スキップする場合の詳細ログ(任意)
-        return; // 次の要素へ
+        return; // スキップ
       }
 
-      // オーバーレイ作成とスタイル設定
-      const overlay = document.createElement("div");
-      overlay.classList.add("ele-view-overlay");
-      overlay.style.position = "absolute";
-      overlay.style.left = `${rect.left}px`;
-      overlay.style.top = `${rect.top}px`;
-      overlay.style.width = `${rect.width}px`;
-      overlay.style.height = `${rect.height}px`;
-      overlay.style.border = `2px solid ${config.color}`;
-      overlay.style.zIndex = config.zIndex;
-      overlay.style.pointerEvents = "none";
-      overlay.style.boxSizing = "border-box";
+      // --- 1. ボーダーオーバーレイを作成 ---
+      const borderOverlay = document.createElement("div");
+      borderOverlay.classList.add(
+        "ele-view-overlay",
+        "ele-view-border-overlay"
+      );
+      borderOverlay.style.position = "absolute";
+      borderOverlay.style.left = `${rect.left}px`;
+      borderOverlay.style.top = `${rect.top}px`;
+      borderOverlay.style.width = `${rect.width}px`;
+      borderOverlay.style.height = `${rect.height}px`;
+      borderOverlay.style.border = `2px solid ${config.color}`;
+      borderOverlay.style.backgroundColor = "transparent"; // ★ 背景は透明に
+      borderOverlay.style.zIndex = String(borderZIndex); // z-index設定
+      borderOverlay.style.pointerEvents = "none";
+      borderOverlay.style.boxSizing = "border-box";
+      fixedContainer.appendChild(borderOverlay);
+      bordersDrawn++;
 
-      // コンテナにオーバーレイを追加
-      fixedContainer.appendChild(overlay);
-      overlaysDrawn++; // カウントアップ
-      // console.log(`[Ele-view Log] Appended overlay for tag '${tag}'.`); // 各オーバーレイ追加時のログ(任意)
+      // --- 2. パディングBOXオーバーレイを作成 (パディングがあれば) ---
+      const paddingTop = parseFloat(styles.paddingTop) || 0;
+      const paddingRight = parseFloat(styles.paddingRight) || 0;
+      const paddingBottom = parseFloat(styles.paddingBottom) || 0;
+      const paddingLeft = parseFloat(styles.paddingLeft) || 0;
+
+      // いずれかのpaddingが0より大きい場合のみ描画
+      if (
+        paddingTop > 0 ||
+        paddingRight > 0 ||
+        paddingBottom > 0 ||
+        paddingLeft > 0
+      ) {
+        const paddingBox = document.createElement("div");
+        paddingBox.classList.add("ele-view-overlay", "ele-view-padding-box");
+        paddingBox.style.position = "absolute";
+        paddingBox.style.pointerEvents = "none";
+        paddingBox.style.boxSizing = "border-box";
+        paddingBox.style.border = "none"; // パディングBOX自体に枠線は不要
+
+        // パディングの内側（コンテンツ領域）の座標とサイズを計算
+        const boxTop = rect.top + paddingTop;
+        const boxLeft = rect.left + paddingLeft;
+        // 幅 = 全体幅 - 左パディング - 右パディング
+        const boxWidth = rect.width - paddingLeft - paddingRight;
+        // 高さ = 全体高さ - 上パディング - 下パディング
+        const boxHeight = rect.height - paddingTop - paddingBottom;
+
+        // 計算後の幅と高さが0より大きい場合のみ描画
+        if (boxWidth > 0 && boxHeight > 0) {
+          paddingBox.style.left = `${boxLeft}px`;
+          paddingBox.style.top = `${boxTop}px`;
+          paddingBox.style.width = `${boxWidth}px`;
+          paddingBox.style.height = `${boxHeight}px`;
+
+          // ★ 背景色を設定 (ヘルパー関数でボーダー色を半透明化、例: alpha 0.15)
+          paddingBox.style.backgroundColor = setRgbaAlpha(config.color, 0.15);
+
+          paddingBox.style.zIndex = String(paddingZIndex); // ★ ボーダーより低いz-index
+
+          fixedContainer.appendChild(paddingBox);
+          paddingBoxesDrawn++;
+        }
+      }
     });
   });
 
-  // ★最終的に描画されたオーバーレイの数を出力
+  // ★ 最終的な描画数をログに出力
   console.log(
-    `[Ele-view Log] visualizeElements: Finished loops. Total overlays drawn: ${overlaysDrawn}`
+    `[Ele-view Log] visualizeElements: Finished loops. Borders drawn: ${bordersDrawn}, Padding Boxes drawn: ${paddingBoxesDrawn}`
   );
 }
 
 // --- スクロール処理 (変更なし) ---
 function handleScrollStop() {
-  console.log("[Ele-view Log] Scroll stopped, triggering redraw."); // ★ログ追加
+  console.log("[Ele-view Log] Scroll stopped, triggering redraw.");
   visualizeElements(activeTags, activeConfigs);
 }
 const scrollListener = () => {
@@ -132,7 +199,6 @@ const scrollListener = () => {
 
 // --- メッセージ受信処理 (変更なし) ---
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  // ★メッセージ受信時のログを少し詳しく
   console.log(
     "[Ele-view Log] Message received in content script:",
     request.action,
@@ -148,7 +214,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     window.addEventListener("scroll", scrollListener, { passive: true });
     console.log(
       "[Ele-view Log] Visualize action processed, scroll listener added."
-    ); // ★ログ追加
+    );
     sendResponse({ success: true });
   } else if (request.action === "clear") {
     isActive = false;
@@ -157,11 +223,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     clearOverlays();
     console.log(
       "[Ele-view Log] Clear action processed, scroll listener removed."
-    ); // ★ログ追加
+    );
     sendResponse({ success: true });
   }
   return true;
 });
 
-// content.js が読み込まれたことを示すログ
-console.log("[Ele-view Log] content script loaded."); // ★ログ追加
+// --- 初期読み込みログ (変更なし) ---
+console.log("[Ele-view Log] content script loaded.");
