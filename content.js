@@ -90,6 +90,22 @@ function visualizeElements(tags, configs) {
     const paddingZIndex = config.zIndex - 1;
     const labelZIndex = config.zIndex + 1; // ラベルは最前面に
 
+    // ★★★ ラベルの共通スタイルを定義（背景色を除く）★★★
+    const commonLabelStyle = {
+      position: "absolute",
+      pointerEvents: "none",
+      // backgroundColor は後で設定
+      color: "white", // 文字色は白のまま（多くの背景色で見やすいはず）
+      fontSize: "10px",
+      fontFamily: "monospace",
+      padding: "1px 3px",
+      borderRadius: "2px",
+      zIndex: String(labelZIndex),
+      whiteSpace: "nowrap",
+    };
+    // ★★★ このタグのボーダー色からラベル背景色を生成 ★★★
+    const labelBackgroundColor = setRgbaAlpha(config.color, 0.5); // Alpha 65%
+
     elements.forEach((element) => {
       const rect = element.getBoundingClientRect();
       const styles = getComputedStyle(element);
@@ -163,20 +179,11 @@ function visualizeElements(tags, configs) {
         rect.width >= MIN_SIZE_FOR_LABELS &&
         rect.height >= MIN_SIZE_FOR_LABELS
       ) {
-        // ラベル共通スタイル
+        // ★★★ この要素/タグ用の完全なラベルスタイルを作成 ★★★
         const labelStyle = {
-          position: "absolute", // コンテナ基準で配置
-          pointerEvents: "none",
-          backgroundColor: "rgba(0, 0, 0, 0.65)", // 背景色を少し濃く
-          color: "white",
-          fontSize: "10px", // 少し小さく
-          fontFamily: "monospace", // 等幅フォントが見やすいかも
-          padding: "1px 3px",
-          borderRadius: "2px",
-          zIndex: String(labelZIndex), // 最前面
-          whiteSpace: "nowrap",
+          ...commonLabelStyle, // 共通スタイルをコピー
+          backgroundColor: labelBackgroundColor, // 計算した背景色を設定
         };
-
         // 上パディングラベル (要素上端の内側、左右中央)
         if (paddingTop > 0) {
           const topLabel = document.createElement("span");
@@ -194,7 +201,7 @@ function visualizeElements(tags, configs) {
           bottomLabel.textContent = `${paddingBottom}px`;
           Object.assign(bottomLabel.style, labelStyle);
           // ラベル自身の高さを考慮して下端から配置 (font-size 10px + padding 1px*2 = ~12px と仮定)
-          const approxLabelHeight = 12;
+          const approxLabelHeight = 26;
           bottomLabel.style.top = `${rect.top + rect.height - approxLabelHeight - 2}px`; // 下端から少し内側
           bottomLabel.style.left = `${rect.left + rect.width / 2}px`; // 水平中央基点
           bottomLabel.style.transform = "translateX(-50%)"; // 水平中央揃え
@@ -212,15 +219,16 @@ function visualizeElements(tags, configs) {
           fixedContainer.appendChild(leftLabel);
           labelsDrawn++;
         }
-        // 右パディングラベル (要素右端の内側、上下中央)
+        // ★ 右パディングラベル (位置調整: left + transform 使用) ★
         if (paddingRight > 0) {
           const rightLabel = document.createElement("span");
           rightLabel.textContent = `${paddingRight}px`;
           Object.assign(rightLabel.style, labelStyle);
-          // right スタイルを使う方が簡単
-          rightLabel.style.right = `${window.innerWidth - (rect.left + rect.width) + 2}px`; // 右端から少し内側
-          rightLabel.style.top = `${rect.top + rect.height / 2}px`; // 垂直中央基点
-          rightLabel.style.transform = "translateY(-50%)"; // 垂直中央揃え
+          // 要素の右端から少し内側を「左端の基準」とする
+          rightLabel.style.left = `${rect.left + rect.width - 2}px`;
+          rightLabel.style.top = `${rect.top + rect.height / 2}px`; // 縦方向中央基点
+          // transformを使って、ラベル自身の幅(100%)だけ左に移動し、さらに縦方向中央に揃える
+          rightLabel.style.transform = "translate(-100%, -50%)";
           fixedContainer.appendChild(rightLabel);
           labelsDrawn++;
         }

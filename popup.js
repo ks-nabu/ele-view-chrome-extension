@@ -14,6 +14,9 @@ const availableTags = [
   "h2",
   "h3",
   "h4",
+  "table",
+  "th",
+  "td",
 ];
 const tagSelectionContainer = document.getElementById("tag-selection");
 const selectAllCheckbox = document.getElementById("select-all");
@@ -36,6 +39,9 @@ const tagConfigs = {
   h2: { color: "rgba(218, 165, 32, 0.8)", zIndex: 109 },
   h3: { color: "rgba(173, 216, 230, 0.8)", zIndex: 108 },
   h4: { color: "rgba(144, 238, 144, 0.8)", zIndex: 107 },
+  table: { color: "rgba(147, 112, 219, 0.7)", zIndex: 111 },
+  th: { color: "rgba(0, 128, 128, 0.7)", zIndex: 112 },
+  td: { color: "rgba(119, 136, 153, 0.7)", zIndex: 113 },
 };
 
 // --- チェックボックス生成 ---
