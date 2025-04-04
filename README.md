@@ -21,7 +21,7 @@ A Chrome extension to visualize the boundaries and padding of specified HTML ele
 
 **From Source (Recommended for now):**
 
-1.  Download the latest release ZIP file from the [Releases page](https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/releases) (replace with your actual link later) or clone/download the source code from this repository.
+1.  Download the latest release ZIP file from the [Releases page](https://github.com/ks-nabu/ele-view-chrome-extension/releases) (replace with your actual link later) or clone/download the source code from this repository.
 2.  If you downloaded the source code (not the release ZIP), you might need to build the Tailwind CSS first (see Development section). The release ZIP should contain the pre-built CSS.
 3.  Extract the ZIP file if you downloaded one.
 4.  Open Chrome and navigate to `chrome://extensions`.
@@ -50,7 +50,7 @@ A Chrome extension to visualize the boundaries and padding of specified HTML ele
 
 If you want to modify or contribute to the extension:
 
-1.  Clone the repository: `git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git` (Replace URL)
+1.  Clone the repository: `git clone https://github.com/ks-nabu/ele-view-chrome-extension.git` (Replace URL)
 2.  Navigate to the project directory: `cd ele-view-chrome-extension` (or your folder name)
 3.  Install development dependencies (Tailwind CSS):
     ```bash
