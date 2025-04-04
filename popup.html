@@ -6,13 +6,16 @@
     <title>Ele-view Popup</title>
     <link href="tailwind.css" rel="stylesheet" />
     <style>
-      /* ポップアップの最小幅などを設定 */
       body {
         min-width: 250px;
         padding: 1rem;
       }
       label {
-        margin-right: 0.5rem; /* チェックボックスとラベルの間隔 */
+        margin-right: 0.5rem;
+      }
+      /* 設定項目間のスペース調整 */
+      .setting-item {
+        margin-top: 0.75rem;
       }
     </style>
   </head>
@@ -30,6 +33,17 @@
       </div>
     </div>
 
+    <div class="setting-item border-t pt-3 mt-3">
+      <h2 class="font-semibold mb-2 text-gray-700 text-sm">表示設定:</h2>
+      <div class="flex items-center">
+        <input type="checkbox" id="show-padding-values" class="mr-1" />
+        <label
+          for="show-padding-values"
+          class="text-sm font-medium text-gray-800"
+          >パディング数値を表示</label
+        >
+      </div>
+    </div>
     <div class="flex justify-between mt-6">
       <button
         id="on-button"
