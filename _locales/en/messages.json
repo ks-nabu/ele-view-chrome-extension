@@ -1,0 +1,38 @@
+{
+  "extensionName": {
+    "message": "Ele-view",
+    "description": "The name of the extension."
+  },
+  "extensionDescription": {
+    "message": "Visualize the area of specified HTML tags, including padding.",
+    "description": "Description shown in extension management and web store."
+  },
+  "popupTitle": {
+    "message": "Ele-view",
+    "description": "Title shown in the popup."
+  },
+  "selectTagsHeading": {
+    "message": "Select tags to display:",
+    "description": "Heading for the tag selection section."
+  },
+  "selectAllLabel": {
+    "message": "Select All",
+    "description": "Label for the Select All checkbox."
+  },
+  "settingsHeading": {
+    "message": "Display Settings:",
+    "description": "Heading for the display settings section."
+  },
+  "showPaddingLabel": {
+    "message": "Show padding values",
+    "description": "Label for the show padding checkbox."
+  },
+  "onButtonText": {
+    "message": "Show (Redraw)",
+    "description": "Text for the On/Redraw button."
+  },
+  "offButtonText": {
+    "message": "Hide",
+    "description": "Text for the Off button."
+  }
+}
