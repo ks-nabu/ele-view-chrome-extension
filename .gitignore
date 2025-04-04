@@ -2,5 +2,7 @@ node_modules/
 *.svg
 requirements.md
 images/sample/
+tailwind.config.js
+input.css
 
 .DS_Store
