@@ -12,3 +12,4 @@ npm-debug.log*
 *.svg
 requirements.md
 images/sample/
+releases/
