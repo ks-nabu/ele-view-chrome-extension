@@ -233,7 +233,7 @@ function visualizeElements(tags, configs) {
           const bottomLabel = document.createElement("span");
           bottomLabel.textContent = `${paddingBottom}px`;
           Object.assign(bottomLabel.style, labelStyle);
-          const approxLabelHeight = 26; // 調整済みのラベル高さ
+          const approxLabelHeight = 16; // 調整済みのラベル高さ
           bottomLabel.style.top = `${rect.top + rect.height - approxLabelHeight - 2}px`; // 下端内側
           bottomLabel.style.left = `${rect.left + rect.width / 2}px`; // 水平中央
           bottomLabel.style.transform = "translateX(-50%)";
